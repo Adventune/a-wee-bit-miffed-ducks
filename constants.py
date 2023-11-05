@@ -1,0 +1,53 @@
+import os
+
+TOTAL_LEVEL_COUNT = 0
+# Yeah it is "constants" but I don't want to change it
+# Every time a new level is added
+level_files = os.listdir("levels")
+for file in level_files:
+    if file.endswith(".json"):
+        TOTAL_LEVEL_COUNT += 1
+
+
+# ======================== UI ========================
+
+WINDOW_WIDTH = 1400
+WINDOW_HEIGHT = 800
+
+SPRITE_WIDTH = 40
+SPRITE_HEIGHT = SPRITE_WIDTH
+
+START_BUTTON_WIDTH = 171
+START_BUTTON_HEIGHT = 106
+
+TITLE_WIDTH = 809
+TITLE_HEIGHT = 64
+
+TEXT_HEIGHT = 35
+
+FLOOR_LEVEL = 40
+SLING_POINT = 120
+
+OBSTACLE_START_X = 600
+
+LEVEL_IMAGE_WIDTH = 1420
+LEVEL_IMAGE_HEIGHT = 855
+
+LEVEL_IMAGE_SCALE = 0.2
+
+LEVEL_IMAGE_SCALED_WIDTH = LEVEL_IMAGE_WIDTH * LEVEL_IMAGE_SCALE
+LEVEL_IMAGE_SCALED_HEIGHT = LEVEL_IMAGE_HEIGHT * LEVEL_IMAGE_SCALE
+
+# ======================== Game ========================
+
+GRAVITY = 1
+FORCE_DIVIDER = 10
+BOUNCE_ACCELERATION_Y = -0.5
+BOUNCE_ACCELERATION_X = -0.8
+MIN_Y_VELOCITY = (3 + 1 / 3) * GRAVITY
+MIN_X_VELOCITY = (3 + 1 / 3) * GRAVITY
+DRAG = 0.5
+HIT_DRAG = 0.8
+MIN_BREAK_VELOCITY = (3 + 1 / 3) * GRAVITY
+
+MIN_TAKEOFF_VELOCITY = 10 * GRAVITY

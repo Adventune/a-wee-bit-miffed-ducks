@@ -1,0 +1,512 @@
+import json
+from math import degrees, atan
+from random import randint
+from copy import deepcopy
+from constants import (OBSTACLE_START_X, FLOOR_LEVEL, SPRITE_WIDTH, SPRITE_HEIGHT, SLING_POINT,
+                       WINDOW_WIDTH, MIN_TAKEOFF_VELOCITY, FORCE_DIVIDER, GRAVITY,
+                       MIN_BREAK_VELOCITY, MIN_X_VELOCITY, MIN_Y_VELOCITY, DRAG,
+                       BOUNCE_ACCELERATION_X, BOUNCE_ACCELERATION_Y, HIT_DRAG, TOTAL_LEVEL_COUNT)
+from scene import Scene
+from game_lib import (clear_window, draw_background, begin_graphics_draw, prepare_sprite,
+                      key,
+                      draw_graphics, prepare_text, set_scene, FOREGROUND, MIDDLEGROUND,
+                      HELP_TEXT, SHADE, mouse)
+from utils import degrees_and_ray_to_x_y, overlaps, get_hypotenuse
+from defaults import DEFAULT_LEVEL, DEFAULT_GAME, DEFAULT_DUCK
+
+current_duck = deepcopy(DEFAULT_DUCK)
+level = deepcopy(DEFAULT_LEVEL)
+level_copy = deepcopy(level)
+game = deepcopy(DEFAULT_GAME)
+
+thrown_ducks = []
+text_objects = []
+
+help_visible = False
+drag = False
+drag_start = (0, 0)
+drag_current = (0, 0)
+
+level_state = 0  # 0 = not finished, -1 = all ducks used, 1 = all donkeys killed
+current_high_score = 0
+current_level = 0
+
+
+def set_level(data):
+    global level, level_copy, text_objects
+    level = data
+    level_copy = deepcopy(data)
+    text_objects = [obstacle for obstacle in level["objects"] if obstacle["type"] == "text"]
+
+
+def random_boxes():
+    """
+    Generates a random level.
+    """
+    global level
+    level["objects"] = []
+    prev_donkey_height = 0
+    for i in range(20):
+        objects_in_column = randint(3, 10)
+
+        # contains_donkey = 1/5 chance of containing a donkey
+        contains_donkey = randint(1, 5) == 1
+
+        stone_height = min(prev_donkey_height, randint(0, objects_in_column - 2))
+
+        # First stone_count objects in column are stones
+        for j in range(stone_height):
+            level["objects"].append({
+                "type": "unbreakable",
+                "x": OBSTACLE_START_X + i * SPRITE_WIDTH,
+                "y": FLOOR_LEVEL + j * SPRITE_HEIGHT,
+                "y_velocity": 0,
+                "has_been_hit": False
+            })
+
+        # Rest of the objects are crates or one of them is a donkey
+        for j in range(stone_height, objects_in_column):
+            obstacle_type = ("soft" if not contains_donkey or j != objects_in_column - 1
+                             else "donkey")
+
+            if obstacle_type == "donkey":
+                prev_donkey_height = j
+
+            level["objects"].append({
+                "type": obstacle_type,
+                "x": OBSTACLE_START_X + i * SPRITE_WIDTH,
+                "y": FLOOR_LEVEL + j * SPRITE_HEIGHT,
+                "y_velocity": 0,
+                "has_been_hit": False
+            })
+
+
+def launch():
+    """
+    Launches a duck and calculates its starting velocity. Stores x and y velocity
+    components to the game dictionary.
+    """
+    if level_state:
+        return
+
+    current_x_velocity, current_y_velocity = degrees_and_ray_to_x_y(current_duck["angle"],
+                                                                    current_duck["force"])
+    current_takeoff_velocity = get_hypotenuse(current_x_velocity, current_y_velocity)
+    if current_takeoff_velocity < MIN_TAKEOFF_VELOCITY:
+        return
+
+    if not current_duck["is_flying"]:
+        current_duck["is_flying"] = True
+        x, y = degrees_and_ray_to_x_y(current_duck["angle"], current_duck["force"])
+        current_duck["x_velocity"] = x
+        current_duck["y_velocity"] = y
+
+
+def new_duck():
+    global current_duck
+    current_duck = deepcopy(DEFAULT_DUCK)
+
+
+def game_draw():
+    """
+    This function draws the game screen.
+    """
+
+    current_x_velocity, current_y_velocity = (
+        degrees_and_ray_to_x_y(current_duck["angle"], current_duck["force"]))
+    current_takeoff_velocity = get_hypotenuse(current_x_velocity, current_y_velocity)
+
+    clear_window()  # Clear the window
+    draw_background()  # Draw the background
+    begin_graphics_draw()  # Begin drawing sprites
+
+    # If level is still going on, draw the duck
+    if level_state == 0:
+        prepare_sprite("duck", current_duck["x"], current_duck["y"])
+
+    # If duck is not flying draw the flight path
+    if (not current_duck["is_flying"]
+            and not level_state
+            and current_takeoff_velocity > MIN_TAKEOFF_VELOCITY):
+        x, y = current_duck["x"], current_duck["y"]
+        x_v, y_v = degrees_and_ray_to_x_y(current_duck["angle"], current_duck["force"])
+        i = 0
+
+        while True:
+            i += 1
+            x += x_v
+            y += y_v
+            y_v -= GRAVITY
+
+            if i % 2 == 0:
+                prepare_sprite("flight_path", x, y, group=FOREGROUND)
+
+            if y < FLOOR_LEVEL:
+                break
+
+    # Draw drag start and end points
+    if drag:
+        prepare_sprite("flight_path", drag_start[0], drag_start[1])
+        prepare_sprite("flight_path", drag_current[0], drag_current[1])
+
+    # Draw floor of stone below the floor level
+    for i in range(0, WINDOW_WIDTH, SPRITE_WIDTH):
+        prepare_sprite("stone", i, FLOOR_LEVEL - SPRITE_HEIGHT, group=FOREGROUND)
+
+    # Draw three stones under the default duck position
+    for i in range(-1, 2):
+        prepare_sprite("stone", SLING_POINT + i * SPRITE_WIDTH, FLOOR_LEVEL, group=FOREGROUND)
+
+    # Draw obstacles
+    for obstacle in level["objects"]:
+        match obstacle["type"]:
+            case "soft":
+                prepare_sprite("crate", obstacle["x"], obstacle["y"], group=MIDDLEGROUND)
+            case "hard":
+                # prepare_sprite("hard_crate", obstacle["x"], obstacle["y"], group=middleground)
+                pass
+            case "unbreakable":
+                prepare_sprite("stone", obstacle["x"], obstacle["y"], group=MIDDLEGROUND)
+            case "donkey" | "donkey_guide":
+                prepare_sprite("donkey", obstacle["x"], obstacle["y"], group=MIDDLEGROUND)
+            case default:
+                pass
+
+    # Draw thrown ducks
+    for thrown_duck in thrown_ducks:
+        prepare_sprite("duck", thrown_duck["x"], thrown_duck["y"], group=MIDDLEGROUND)
+
+    prepare_text("H: Help", WINDOW_WIDTH - 120, 760, size=20, anchor_x="right")
+    prepare_text("Esc: Menu", 120, 760, size=20, anchor_x="left")
+
+    # Draw remaining ducks
+    prepare_text("Ducks remaining: {}".format(level["ducks"] - len(thrown_ducks)),
+                 WINDOW_WIDTH / 2, 600, size=20)
+    # Draw level name
+    prepare_text(level["name"], WINDOW_WIDTH / 2, 760, size=20)
+    # Draw level description
+    prepare_text(level["description"], WINDOW_WIDTH / 2, 730, size=20)
+
+    # Draw random level high score
+    if current_level == -1:
+        prepare_text("High score: {}".format(game["random_high_score"]), WINDOW_WIDTH / 2, 700,
+                     size=20)
+        prepare_text(f"Score: {current_high_score}", WINDOW_WIDTH / 2, 670, size=20)
+
+    if level_state == 0:
+        # Loop through every text object in the level
+        for text_object in text_objects:
+            # Draw the text object
+            prepare_text(text_object["text"], text_object["x"], text_object["y"], anchor_x="left",
+                         size=18,
+                         color=(255, 255, 255, 255) if not text_object.get("black", False) else
+                         (0, 0, 0, 255))
+
+    if help_visible:
+        prepare_sprite("shade", x=0, y=0, group=SHADE)
+
+        prepare_text("Controls:", WINDOW_WIDTH / 2, 630, size=20, group=HELP_TEXT)
+        prepare_text("Drag the mouse on the screen to launch", WINDOW_WIDTH / 2,
+                     600, size=20, group=HELP_TEXT)
+        prepare_text("OR!!! Left/Right: Change angle", WINDOW_WIDTH / 2, 570, size=20,
+                     group=HELP_TEXT)
+        prepare_text("Up/Down: Change force", WINDOW_WIDTH / 2, 540, size=20, group=HELP_TEXT)
+        prepare_text("Space/Enter: Launch duck", WINDOW_WIDTH / 2, 510, size=20, group=HELP_TEXT)
+        prepare_text("R: Reset the level (Not available in random mode)", WINDOW_WIDTH / 2, 480,
+                     size=20, group=HELP_TEXT)
+
+    if level_state == 1:
+        prepare_text("Level completed!", WINDOW_WIDTH / 2, 400, size=40)
+        prepare_text("Press R to restart", WINDOW_WIDTH / 2, 350, size=30)
+        prepare_text("Press Enter to continue and save", WINDOW_WIDTH / 2, 300, size=30)
+
+    if level_state == -1:
+        prepare_text("Level failed!", WINDOW_WIDTH / 2, 400, size=40)
+        prepare_text("Press Enter or R to restart", WINDOW_WIDTH / 2, 350, size=30)
+
+    draw_graphics()  # Draw the batch of sprites
+
+
+def game_keypress(sym, mods):
+    """
+    This function handles keyboard input.
+    """
+    global thrown_ducks, level_state, current_level, current_high_score
+
+    match sym:
+        case key.R:
+            if level_state == -1:
+                current_high_score = 0
+            game_init(current_level, current_high_score)
+        case key.H:
+            global help_visible
+            help_visible = not help_visible
+        case key.RIGHT:
+            current_duck["angle"] -= 10
+            if current_duck["angle"] < 10:
+                current_duck["angle"] = 350
+        case key.LEFT:
+            current_duck["angle"] += 10
+            if current_duck["angle"] > 350:
+                current_duck["angle"] = 10
+        case key.UP:
+            if current_duck["force"] < 50:
+                current_duck["force"] += 5
+        case key.DOWN:
+            if current_duck["force"] >= 5:
+                current_duck["force"] -= 5
+            else:
+                current_duck["force"] = 0
+        case key.ESCAPE:
+            set_scene("levels").init()
+        case key.ENTER | key.SPACE:
+            match level_state:
+                case 0:
+                    launch()
+                case 1:
+                    if current_level == -1:
+                        current_high_score += 1
+                        level_completed(random_level=True, score=current_high_score)
+                        game_init(-1, current_high_score)
+                    elif current_level + 1 == TOTAL_LEVEL_COUNT:
+                        level_completed()
+                        set_scene("completed")
+                    else:
+                        level_completed()
+                        game_init(current_level + 1)
+                case -1:
+                    current_high_score = 0
+                    game_init(current_level, 0)
+
+
+def game_mouse_down(x, y, button, modifiers):
+    """
+    This function handles mouse drag events.
+    """
+    if level_state or help_visible:
+        return
+
+    if button == mouse.LEFT:
+        global drag_start, drag
+        drag_start = (x, y)
+        drag = True
+
+
+def game_mouse_release(x, y, button, modifiers):
+    """
+    This function handles mouse release events.
+    """
+    if level_state or help_visible:
+        return
+
+    if button == mouse.LEFT:
+        global drag, drag_start, drag_current
+        drag = False
+        drag_start = (0, 0)
+        drag_current = (0, 0)
+        launch()
+
+
+def game_drag(x, y, dx, dy, buttons, modifiers):
+    if level_state or help_visible:
+        return
+
+    # Create vector from drag start to current mouse position
+    real_dx = drag_start[0] - x + 0.001  # Add 0.001 to avoid division by zero
+    real_dy = drag_start[1] - y
+
+    # Calculate angle from vector
+    angle = round(degrees(atan(real_dy / real_dx)))
+    force = round(get_hypotenuse(real_dx, real_dy) / FORCE_DIVIDER)
+
+    # Clamp force between 5 and 50
+    force = max(5, min(50, force))
+    # Clamp angle between 20 and 80
+    angle = max(20, min(80, abs(angle)))
+
+    # Set angle and force
+    current_duck["angle"] = angle
+    current_duck["force"] = force
+    global drag_current
+    drag_current = (x, y)
+
+
+def game_update(dt):
+    """
+    This function handles game logic.
+    """
+
+    donkeys_remaining = (
+        len([obstacle for obstacle in level["objects"] if obstacle["type"] == "donkey"]))
+
+    if level["ducks"] == len(thrown_ducks) or donkeys_remaining == 0:
+        # Level has ended in one way or another
+        global level_state
+        if level_state == 0:
+            level_state = -1 if donkeys_remaining > 0 else 1
+
+    else:
+        # Level is still ongoing
+        if current_duck["is_flying"]:
+            # A duck is currently in the air
+
+            # Save ducks position before updating it
+            prev_position_x = current_duck["x"]
+            prev_position_y = current_duck["y"]
+
+            # Update ducks position
+            current_duck["x"] += current_duck["x_velocity"]
+            current_duck["y"] += current_duck["y_velocity"]
+            current_duck["y_velocity"] -= GRAVITY
+
+            # Loop for every object that is within the x range of the duck
+            check_range = 2 * SPRITE_WIDTH
+
+            for obstacle in [obstacle for obstacle in level["objects"] if
+                             abs(obstacle["x"] - current_duck["x"]) < check_range]:
+                # Go through every obstacle near the duck and check if it overlaps with the duck
+                if overlaps(current_duck["x"], current_duck["y"], obstacle["x"], obstacle["y"]):
+
+                    # Object is destroyable if:
+                    # 1. It is a soft obstacle
+                    # 2. It is a donkey
+                    # 3. It is a hard obstacle and has been hit before
+                    if obstacle["type"] == "soft" or obstacle["type"] == "donkey" or \
+                            (obstacle["type"] == "hard" and obstacle.get("has_been_hit", False)):
+
+                        # Here we handle all destroyable objects and destroy them
+                        # if they are hit with enough force
+
+                        # If duck collides with an soft obstacle, remove obstacle
+                        # and lower ducks velocity
+                        if get_hypotenuse(current_duck["x_velocity"],
+                                          current_duck["y_velocity"]) > MIN_BREAK_VELOCITY:
+                            level["objects"].remove(obstacle)
+                            current_duck["x_velocity"] *= HIT_DRAG
+                            current_duck["y_velocity"] *= HIT_DRAG
+
+                    # Object is not destroyable if:
+                    # 1. It is an unbreakable obstacle
+                    # 2. It is a hard obstacle and has not been hit before
+                    # 3. It is destroyable but the duck is not moving fast enough
+                    if obstacle["type"] == "unbreakable" or \
+                            (obstacle["type"] == "hard" and not obstacle.get("has_been_hit",
+                                                                             False)) or \
+                            get_hypotenuse(current_duck["x_velocity"],
+                                           current_duck["y_velocity"]) < MIN_BREAK_VELOCITY:
+
+                        # Set that the obstacle has been hit
+                        # It doesn't matter if it is destroyable or not
+                        if not obstacle.get("has_been_hit", False):
+                            obstacle["has_been_hit"] = True
+
+                        # Duck has previously been above or below the obstacle
+                        # It must have entered from above or below so bounce it on the y axis
+                        duck_came_from_above = prev_position_y > obstacle["y"] + SPRITE_HEIGHT
+                        duck_came_from_below = prev_position_y + SPRITE_HEIGHT < obstacle["y"]
+                        if duck_came_from_above or duck_came_from_below:
+                            # If the duck is moving slow enough and it came from above
+                            # stop it and add it to the list of thrown ducks
+                            if ((abs(current_duck["y_velocity"]) < MIN_Y_VELOCITY or
+                                 abs(current_duck[
+                                         "x_velocity"]) < MIN_X_VELOCITY)) and duck_came_from_above:
+
+                                current_duck["y_velocity"] = 0
+                                current_duck["is_flying"] = False
+                                current_duck["y"] = obstacle["y"] + SPRITE_HEIGHT
+
+                                thrown_ducks.append(current_duck)
+                                new_duck()
+
+                            else:
+                                current_duck["y"] = prev_position_y
+                                current_duck["y_velocity"] *= BOUNCE_ACCELERATION_Y
+                                current_duck["x_velocity"] *= DRAG
+
+                        # Duck has previously been to the left or right of the obstacle
+                        # It must have entered from the side so bounce it on the y axis
+                        else:
+                            current_duck["x"] = prev_position_x
+                            current_duck["x_velocity"] *= BOUNCE_ACCELERATION_X
+                            current_duck["y_velocity"] *= DRAG
+
+            # Duck is not colliding with any obstacles
+            # Check if it flew off the screen or hit the floor
+            if current_duck["x"] < 0 or current_duck["x"] > WINDOW_WIDTH:
+                # Stop the duck and add it to the list of thrown ducks
+                current_duck["is_flying"] = False
+                current_duck["x_velocity"] = 0
+                current_duck["y_velocity"] = 0
+                thrown_ducks.append(current_duck)
+                new_duck()
+            elif current_duck["y"] < FLOOR_LEVEL:
+                current_duck["y"] = FLOOR_LEVEL
+                # Bounce back until the velocity is small enough
+                if abs(current_duck["y_velocity"]) > MIN_Y_VELOCITY:
+                    current_duck["y_velocity"] *= BOUNCE_ACCELERATION_Y
+                    current_duck["x_velocity"] *= DRAG
+
+                else:
+                    current_duck["y_velocity"] = 0
+                    current_duck["is_flying"] = False
+                    current_duck["y"] = FLOOR_LEVEL
+
+                    thrown_ducks.append(current_duck)
+                    new_duck()
+
+
+def game_init(level_number, high_score=0):
+    """
+    Initializes the game.
+    """
+    print(f"Initializing level {level_number} ")
+    global current_duck, level_state, thrown_ducks, level, current_level, current_high_score, game
+    global text_objects
+
+    # Initialize game values from game file
+    with open("game.json", "r") as game_data:
+        game = json.load(game_data)
+
+    # Init level values to default
+    current_level = level_number
+    current_duck = deepcopy(DEFAULT_DUCK)
+    level_state = 0
+    thrown_ducks = []
+    text_objects = []
+
+    if current_level == -1:
+        random_boxes()
+        current_high_score = high_score
+        level["name"] = "Random Level"
+        level["description"] = "A randomly generated level"
+        # Level ducks is at least as many as there are obstacles of type donkey
+        donkeys = len([obstacle for obstacle in level["objects"] if obstacle["type"] == "donkey"])
+        level["ducks"] = randint(max(donkeys, 3), donkeys + 3)
+
+        global level_copy
+        level_copy = deepcopy(level)
+
+    else:
+        with open(f"levels/level_{current_level}.json", "r") as levels_file:
+            set_level(json.load(levels_file))
+
+
+def level_completed(random_level=False, score=0):
+    with open("game.json", "w") as game_data:
+        new_game = deepcopy(game)
+        if random_level:
+            new_game["random_levels_completed"] += 1
+
+            if score > game["random_high_score"]:
+                new_game["random_high_score"] = score
+
+        else:
+            new_game["level_progress"] = max(current_level + 1, game["level_progress"])
+
+        json.dump(new_game, game_data)
+
+
+GAME_SCENE = Scene(draw_handler=game_draw, interval_handler=game_update,
+                   keyboard_handler=game_keypress,
+                   mouse_handler=game_mouse_down, release_handler=game_mouse_release,
+                   drag_handler=game_drag, init=game_init)

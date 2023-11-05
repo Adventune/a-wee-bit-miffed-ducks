@@ -1,0 +1,345 @@
+{
+  "name": "Level 0",
+  "description": "Let's get some wind under our wings!",
+  "ducks": 3,
+  "objects": [
+    {
+      "type": "unbreakable",
+      "x": 600,
+      "y": 40
+    },
+    {
+      "type": "unbreakable",
+      "x": 640,
+      "y": 40
+    },
+    {
+      "type": "unbreakable",
+      "x": 680,
+      "y": 40
+    },
+    {
+      "type": "unbreakable",
+      "x": 720,
+      "y": 40
+    },
+    {
+      "type": "unbreakable",
+      "x": 760,
+      "y": 40
+    },
+    {
+      "type": "unbreakable",
+      "x": 800,
+      "y": 40
+    },
+    {
+      "type": "unbreakable",
+      "x": 840,
+      "y": 40
+    },
+    {
+      "type": "unbreakable",
+      "x": 880,
+      "y": 40
+    },
+    {
+      "type": "unbreakable",
+      "x": 920,
+      "y": 40
+    },
+    {
+      "type": "unbreakable",
+      "x": 960,
+      "y": 40
+    },
+    {
+      "type": "unbreakable",
+      "x": 1000,
+      "y": 40
+    },
+    {
+      "type": "unbreakable",
+      "x": 1040,
+      "y": 40
+    },
+    {
+      "type": "unbreakable",
+      "x": 1080,
+      "y": 40
+    },
+    {
+      "type": "unbreakable",
+      "x": 1120,
+      "y": 40
+    },
+    {
+      "type": "unbreakable",
+      "x": 1160,
+      "y": 40
+    },
+    {
+      "type": "unbreakable",
+      "x": 1200,
+      "y": 40
+    },
+    {
+      "type": "unbreakable",
+      "x": 1240,
+      "y": 40
+    },
+    {
+      "type": "unbreakable",
+      "x": 1280,
+      "y": 40
+    },
+    {
+      "type": "unbreakable",
+      "x": 1320,
+      "y": 40
+    },
+    {
+      "type": "unbreakable",
+      "x": 1360,
+      "y": 40
+    },
+    {
+      "type": "soft",
+      "x": 880,
+      "y": 80
+    },
+    {
+      "type": "soft",
+      "x": 880,
+      "y": 120
+    },
+    {
+      "type": "soft",
+      "x": 880,
+      "y": 160
+    },
+    {
+      "type": "soft",
+      "x": 880,
+      "y": 200
+    },
+    {
+      "type": "soft",
+      "x": 880,
+      "y": 240
+    },
+    {
+      "type": "soft",
+      "x": 920,
+      "y": 80
+    },
+    {
+      "type": "soft",
+      "x": 920,
+      "y": 120
+    },
+    {
+      "type": "soft",
+      "x": 920,
+      "y": 160
+    },
+    {
+      "type": "soft",
+      "x": 920,
+      "y": 200
+    },
+    {
+      "type": "soft",
+      "x": 920,
+      "y": 240
+    },
+    {
+      "type": "soft",
+      "x": 960,
+      "y": 80
+    },
+    {
+      "type": "soft",
+      "x": 960,
+      "y": 120
+    },
+    {
+      "type": "soft",
+      "x": 960,
+      "y": 160
+    },
+    {
+      "type": "soft",
+      "x": 960,
+      "y": 200
+    },
+    {
+      "type": "soft",
+      "x": 960,
+      "y": 240
+    },
+    {
+      "type": "donkey",
+      "x": 1000,
+      "y": 80
+    },
+    {
+      "type": "soft",
+      "x": 1040,
+      "y": 80
+    },
+    {
+      "type": "soft",
+      "x": 1040,
+      "y": 120
+    },
+    {
+      "type": "soft",
+      "x": 1040,
+      "y": 160
+    },
+    {
+      "type": "soft",
+      "x": 1040,
+      "y": 200
+    },
+    {
+      "type": "soft",
+      "x": 1040,
+      "y": 240
+    },
+    {
+      "type": "soft",
+      "x": 1080,
+      "y": 80
+    },
+    {
+      "type": "soft",
+      "x": 1080,
+      "y": 120
+    },
+    {
+      "type": "soft",
+      "x": 1080,
+      "y": 160
+    },
+    {
+      "type": "soft",
+      "x": 1080,
+      "y": 200
+    },
+    {
+      "type": "soft",
+      "x": 1080,
+      "y": 240
+    },
+    {
+      "type": "donkey",
+      "x": 1120,
+      "y": 80
+    },
+    {
+      "type": "soft",
+      "x": 1160,
+      "y": 80
+    },
+    {
+      "type": "soft",
+      "x": 1160,
+      "y": 120
+    },
+    {
+      "type": "soft",
+      "x": 1160,
+      "y": 160
+    },
+    {
+      "type": "soft",
+      "x": 1160,
+      "y": 200
+    },
+    {
+      "type": "soft",
+      "x": 1160,
+      "y": 240
+    },
+    {
+      "type": "soft",
+      "x": 1200,
+      "y": 80
+    },
+    {
+      "type": "soft",
+      "x": 1200,
+      "y": 120
+    },
+    {
+      "type": "soft",
+      "x": 1200,
+      "y": 160
+    },
+    {
+      "type": "soft",
+      "x": 1200,
+      "y": 200
+    },
+    {
+      "type": "soft",
+      "x": 1200,
+      "y": 240
+    },
+    {
+      "type": "donkey",
+      "x": 1240,
+      "y": 80
+    },
+    {
+      "type": "text",
+      "x": 100,
+      "y": 370,
+      "text": "Welcome to the game! You are the duck."
+    },
+    {
+      "type": "text",
+      "x": 100,
+      "y": 340,
+      "text": "You are able to fly, but more like a chicken than a duck."
+    },
+    {
+      "type": "text",
+      "x": 100,
+      "y": 310,
+      "text": "Drag with the mouse to create a wind gust. Release to launch."
+    },
+    {
+      "type": "text",
+      "x": 100,
+      "y": 280,
+      "text": "Press 'H' for alternative way to launch the duck."
+    },
+    {
+      "type": "text",
+      "x": 615,
+      "y": 45,
+      "text": "Stone is unbreakable."
+    },
+    {
+      "type": "text",
+      "x": 930,
+      "y": 200,
+      "text": "Crates do break,"
+    },
+    {
+      "type": "text",
+      "x": 865,
+      "y": 170,
+      "text": "but they slow you down."
+    },
+    {
+      "type": "text",
+      "x": 890,
+      "y": 90,
+      "text": "Target ->"
+    }
+  ]
+}
