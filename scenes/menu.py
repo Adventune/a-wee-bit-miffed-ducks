@@ -1,13 +1,18 @@
-import constants
 from clickable_area import ClickableArea
 from scene import Scene
-from game_lib import (clear_window, draw_background, begin_graphics_draw, prepare_text,
-                      draw_graphics, set_scene, close, mouse)
+from game_lib import (
+    clear_window,
+    draw_background,
+    begin_graphics_draw,
+    prepare_text,
+    draw_graphics,
+    set_scene,
+    close,
+    mouse,
+)
+from constants import ui
 
-PLAY_BUTTON_X = constants.WINDOW_WIDTH / 2
 PLAY_BUTTON_Y = 240
-
-QUIT_BUTTON_X = constants.WINDOW_WIDTH / 2
 QUIT_BUTTON_Y = 145
 
 clickable_areas: list[ClickableArea] = []
@@ -22,12 +27,32 @@ def menu_draw():
     begin_graphics_draw()
 
     global clickable_areas
-    clickable_areas = [prepare_text("Play", PLAY_BUTTON_X, PLAY_BUTTON_Y,
-                                    onclick=lambda: set_scene("levels").init(), anchor_x="center"),
-                       prepare_text("Quit", QUIT_BUTTON_X, QUIT_BUTTON_Y,
-                                    onclick=lambda: close(), anchor_x="center")]
 
-    prepare_text("A Wee Bit Miffed Ducks", constants.WINDOW_WIDTH / 2, 450)
+    quit_button_x = ui.WINDOW_WIDTH / 2
+    play_button_x = ui.WINDOW_WIDTH / 2
+
+    clickable_areas = [
+        prepare_text(
+            "Play",
+            play_button_x,
+            PLAY_BUTTON_Y,
+            onclick=lambda: set_scene("levels").init(),
+            anchor_x="center",
+        ),
+        prepare_text(
+            "Quit",
+            quit_button_x,
+            QUIT_BUTTON_Y,
+            onclick=lambda: close(),
+            anchor_x="center",
+        ),
+    ]
+
+    prepare_text(
+        "A Wee Bit Miffed Ducks",
+        ui.WINDOW_WIDTH / 2,
+        ui.WINDOW_HEIGHT / 2 + 100,
+    )
 
     draw_graphics()
 

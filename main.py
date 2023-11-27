@@ -1,8 +1,9 @@
 import json
 from os.path import isfile
 
-import constants
-from game_lib import (load_sprites, create_window, set_scene, start)
+
+from constants import ui
+from game_lib import load_sprites, create_window, set_scene, start
 from defaults import DEFAULT_GAME
 
 
@@ -25,7 +26,7 @@ def main():
     :return: None
     """
     load_sprites("sprites", "sprites/level_images")
-    create_window(width=constants.WINDOW_WIDTH, height=constants.WINDOW_HEIGHT)
+    create_window(width=ui.WINDOW_WIDTH, height=ui.WINDOW_HEIGHT)
 
     create_game_file_if_not_exists()
 
@@ -34,7 +35,7 @@ def main():
     start()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
 else:
     print("This file is not meant to be imported.")

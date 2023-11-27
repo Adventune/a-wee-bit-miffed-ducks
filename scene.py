@@ -1,9 +1,14 @@
 class Scene:
-    interval = 1.0 / 60.0
-
-    def __init__(self, draw_handler=None, interval_handler=None, drag_handler=None,
-                 mouse_handler=None, release_handler=None, keyboard_handler=None,
-                 interval=1.0 / 60.0, init=None):
+    def __init__(
+        self,
+        draw_handler=None,
+        interval_handler=None,
+        drag_handler=None,
+        mouse_handler=None,
+        release_handler=None,
+        keyboard_handler=None,
+        init=None,
+    ):
         if draw_handler is not None:
             self.draw_handler = draw_handler
         if interval_handler is not None:
@@ -18,8 +23,6 @@ class Scene:
             self.keyboard_handler = keyboard_handler
         if init is not None:
             self.init = init
-
-        self.interval = interval
 
     def init(self):
         pass

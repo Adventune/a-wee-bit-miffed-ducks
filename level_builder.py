@@ -1,12 +1,24 @@
-from constants import (OBSTACLE_START_X, WINDOW_WIDTH, WINDOW_HEIGHT, FLOOR_LEVEL, SPRITE_WIDTH,
-                       SPRITE_HEIGHT)
-from game_lib import (clear_window, draw_background, begin_graphics_draw, prepare_sprite,
-                      mouse, draw_graphics, prepare_text, key, set_draw_handler,
-                      set_mouse_handler, set_mouse_move_handler, set_keyboard_handler,
-                      set_drag_handler, start, load_sprites, create_window)
-
-BUILD_LIMITS_X = [OBSTACLE_START_X, WINDOW_WIDTH]
-BUILD_LIMITS_Y = [FLOOR_LEVEL, WINDOW_HEIGHT]
+from constants import (
+    ui,
+)
+from game_lib import (
+    clear_window,
+    draw_background,
+    begin_graphics_draw,
+    prepare_sprite,
+    mouse,
+    draw_graphics,
+    prepare_text,
+    key,
+    set_draw_handler,
+    set_mouse_handler,
+    set_mouse_move_handler,
+    set_keyboard_handler,
+    set_drag_handler,
+    start,
+    load_sprites,
+    create_window,
+)
 
 current_sprite = 0
 mouse_pos = (0, 0)
@@ -27,56 +39,102 @@ def draw():
 
     begin_graphics_draw()  # Begin drawing
 
-    # Add sprite options (crate, stone, donkey) to batch with a number below
+    # Add sprite options (crate, stone, donkey, hard_crate) to batch with a number below
     margin = 30
     top_margin = 50
-    prepare_sprite("crate", x=WINDOW_WIDTH / 2 - SPRITE_WIDTH / 2 - (SPRITE_WIDTH + margin),
-                   y=WINDOW_HEIGHT - SPRITE_HEIGHT - top_margin)
-    prepare_sprite("stone", x=WINDOW_WIDTH / 2 - SPRITE_WIDTH / 2,
-                   y=WINDOW_HEIGHT - SPRITE_HEIGHT - top_margin)
-    prepare_sprite("donkey", x=WINDOW_WIDTH / 2 - SPRITE_WIDTH / 2 + SPRITE_WIDTH + margin,
-                   y=WINDOW_HEIGHT - SPRITE_HEIGHT - top_margin)
-
-    prepare_text("1",
-                 x=WINDOW_WIDTH / 2 - SPRITE_WIDTH / 2 - (SPRITE_WIDTH + margin) + SPRITE_WIDTH / 2,
-                 y=WINDOW_HEIGHT - SPRITE_HEIGHT - top_margin - SPRITE_HEIGHT / 2 - 10,
-                 anchor_y="top")
-    prepare_text("2",
-                 x=WINDOW_WIDTH / 2 - SPRITE_WIDTH / 2 + SPRITE_WIDTH / 2,
-                 y=WINDOW_HEIGHT - SPRITE_HEIGHT - top_margin - SPRITE_HEIGHT / 2 - 10,
-                 anchor_y="top")
-    prepare_text("3",
-                 x=WINDOW_WIDTH / 2 - SPRITE_WIDTH / 2 + SPRITE_WIDTH + margin + SPRITE_WIDTH / 2,
-                 y=WINDOW_HEIGHT - SPRITE_HEIGHT - top_margin - SPRITE_HEIGHT / 2 - 10,
-                 anchor_y="top")
+    for index, spriteName in enumerate(["crate", "stone", "donkey", "hard_crate"]):
+        prepare_sprite(
+            spriteName,
+            x=ui.WINDOW_WIDTH / 2
+            - ui.SPRITE_WIDTH / 2
+            - (ui.SPRITE_WIDTH + margin)
+            * (1.5 - index),  # This magic value seems to center everything best
+            y=ui.WINDOW_HEIGHT - ui.SPRITE_HEIGHT - top_margin,
+            scale=ui.WINDOW_RESIZE_SCALE,
+        )
+        prepare_text(
+            str(index + 1),
+            x=ui.WINDOW_WIDTH / 2
+            - ui.SPRITE_WIDTH / 2
+            - (ui.SPRITE_WIDTH + margin) * (1.2 - index),  # Same here
+            y=ui.WINDOW_HEIGHT - ui.SPRITE_HEIGHT - top_margin - ui.SPRITE_HEIGHT - 10,
+            anchor_x="center",
+        )
+        # Prepare single dot to the middle of the screen
+        # Uncomment if adding sprites to get the screen center
+        # prepare_text(".", x=ui.WINDOW_WIDTH / 2, y=ui.WINDOW_HEIGHT - 120)
 
     # Add instructions to batch
-    prepare_text("Click to place a sprite. Right click to remove a sprite. Ctrl + S to save",
-                 x=WINDOW_WIDTH / 2,
-                 y=WINDOW_HEIGHT - 10, anchor_y="top", size=15)
+    prepare_text(
+        "Click to place a sprite. Right click to remove a sprite. Ctrl + S to save",
+        x=ui.WINDOW_WIDTH / 2,
+        y=ui.WINDOW_HEIGHT - 10,
+        anchor_y="top",
+        size=15,
+    )
 
     # Add floor sprites to batch
-    for i in range(0, WINDOW_WIDTH, SPRITE_WIDTH):
-        prepare_sprite("stone", x=i, y=0)
+    for i in range(0, ui.WINDOW_WIDTH, ui.SPRITE_WIDTH):
+        prepare_sprite("stone", x=i, y=0, scale=ui.WINDOW_RESIZE_SCALE)
 
     # Add sprites from objects list to batch
     for obj in objects:
         match obj["type"]:
             case "soft":
-                prepare_sprite("crate", x=obj["x"], y=obj["y"])
+                prepare_sprite(
+                    "crate",
+                    x=obj["x"] * ui.WINDOW_RESIZE_SCALE,
+                    y=obj["y"] * ui.WINDOW_RESIZE_SCALE,
+                    scale=ui.WINDOW_RESIZE_SCALE,
+                )
             case "unbreakable":
-                prepare_sprite("stone", x=obj["x"], y=obj["y"])
+                prepare_sprite(
+                    "stone",
+                    x=obj["x"] * ui.WINDOW_RESIZE_SCALE,
+                    y=obj["y"] * ui.WINDOW_RESIZE_SCALE,
+                    scale=ui.WINDOW_RESIZE_SCALE,
+                )
             case "donkey":
-                prepare_sprite("donkey", x=obj["x"], y=obj["y"])
+                prepare_sprite(
+                    "donkey",
+                    x=obj["x"] * ui.WINDOW_RESIZE_SCALE,
+                    y=obj["y"] * ui.WINDOW_RESIZE_SCALE,
+                    scale=ui.WINDOW_RESIZE_SCALE,
+                )
+            case "hard":
+                prepare_sprite(
+                    "hard_crate",
+                    x=obj["x"] * ui.WINDOW_RESIZE_SCALE,
+                    y=obj["y"] * ui.WINDOW_RESIZE_SCALE,
+                    scale=ui.WINDOW_RESIZE_SCALE,
+                )
 
     # Add current sprite to batch at mouse pos
+    x = (
+        40
+        * round((mouse_pos[0] / ui.WINDOW_RESIZE_SCALE) / 40)
+        * ui.WINDOW_RESIZE_SCALE
+    )
+    y = (
+        40
+        * round((mouse_pos[1] / ui.WINDOW_RESIZE_SCALE) / 40)
+        * ui.WINDOW_RESIZE_SCALE
+    )
+
     match current_sprite:
         case 0:
-            prepare_sprite("crate", x=mouse_pos[0], y=mouse_pos[1])
+            prepare_sprite("crate", x=x, y=y, scale=ui.WINDOW_RESIZE_SCALE)
         case 1:
-            prepare_sprite("stone", x=mouse_pos[0], y=mouse_pos[1])
+            prepare_sprite("stone", x=x, y=y, scale=ui.WINDOW_RESIZE_SCALE)
         case 2:
-            prepare_sprite("donkey", x=mouse_pos[0], y=mouse_pos[1])
+            prepare_sprite("donkey", x=x, y=y, scale=ui.WINDOW_RESIZE_SCALE)
+        case 3:
+            prepare_sprite(
+                "hard_crate",
+                x=x,
+                y=y,
+                scale=ui.WINDOW_RESIZE_SCALE,
+            )
 
     draw_graphics()  # Draw everything
 
@@ -89,28 +147,43 @@ def modify_objects(button):
     # if location contains a sprite, remove it from the list
     global objects, last_action
 
+    x = 40 * round(mouse_pos[0] / ui.WINDOW_RESIZE_SCALE / 40)
+    y = 40 * round(mouse_pos[1] / ui.WINDOW_RESIZE_SCALE / 40)
+
     # Remove sprite from objects list if it is in the same position as the last action
     if button == mouse.LEFT or button == mouse.RIGHT:
-        if (mouse_pos[0] == last_action["pos_x"] and mouse_pos[1] == last_action["pos_y"]
-                and button == last_action["type"]):
+        if (
+            x == last_action["pos_x"]
+            and y == last_action["pos_y"]
+            and button == last_action["type"]
+        ):
             return
 
-        last_action["pos_x"] = mouse_pos[0]
-        last_action["pos_y"] = mouse_pos[1]
+        last_action["pos_x"] = x
+        last_action["pos_y"] = y
         last_action["type"] = button
 
         objects = list(
-            filter(lambda obj: obj["x"] != mouse_pos[0] or obj["y"] != mouse_pos[1], objects))
+            filter(
+                lambda obj: obj["x"] != x or obj["y"] != y,
+                objects,
+            )
+        )
 
     # Add sprite to objects list if action is left click
     if button == mouse.LEFT:
         match current_sprite:
             case 0:
-                objects.append({"x": mouse_pos[0], "y": mouse_pos[1], "type": "soft"})
+                objects.append({"x": x, "y": y, "type": "soft"})
             case 1:
-                objects.append({"x": mouse_pos[0], "y": mouse_pos[1], "type": "unbreakable"})
+                objects.append({"x": x, "y": y, "type": "unbreakable"})
             case 2:
-                objects.append({"x": mouse_pos[0], "y": mouse_pos[1], "type": "donkey"})
+                objects.append({"x": x, "y": y, "type": "donkey"})
+            case 3:
+                objects.append({"x": x, "y": y, "type": "hard"})
+
+        print(objects)
+        print(ui.WINDOW_RESIZE_SCALE)
 
 
 def mouse_press(x, y, button, modifiers):
@@ -124,12 +197,7 @@ def mouse_drag(x, y, dx, dy, button, modifiers):
     """
     Handles mouse drag events.
     """
-
-    # Draw sprite at mouse pos
-    global mouse_pos
-    mouse_pos = (max(OBSTACLE_START_X, min(WINDOW_WIDTH, x // SPRITE_WIDTH * SPRITE_WIDTH)),
-                 max(FLOOR_LEVEL, min(WINDOW_HEIGHT, y // SPRITE_HEIGHT *
-                                      SPRITE_HEIGHT)))
+    updateMousePos(x, y)
     modify_objects(button)
 
 
@@ -138,10 +206,21 @@ def mouse_motion(x, y, dx, dy):
     Handles mouse motion events.
     """
     # Set mouse pos rounded down to nearest sprite
+    updateMousePos(x, y)
+
+
+def updateMousePos(x, y):
     global mouse_pos
-    mouse_pos = (max(OBSTACLE_START_X, min(WINDOW_WIDTH, x // SPRITE_WIDTH * SPRITE_WIDTH)),
-                 max(FLOOR_LEVEL, min(WINDOW_HEIGHT, y // SPRITE_HEIGHT *
-                                      SPRITE_HEIGHT)))
+    mouse_pos = (
+        max(
+            ui.OBSTACLE_START_X,
+            min(ui.WINDOW_WIDTH, x // ui.SPRITE_WIDTH * ui.SPRITE_WIDTH),
+        ),
+        max(
+            ui.FLOOR_LEVEL,
+            min(ui.WINDOW_HEIGHT, y // ui.SPRITE_HEIGHT * ui.SPRITE_HEIGHT),
+        ),
+    )
 
 
 def prompt_level_info():
@@ -176,8 +255,15 @@ def save_level(level_name, level_description, ducks):
 
     # Create a new file with the level number
     with open(f"levels/level_{level}.json", "w") as f:
-        json.dump({"name": level_name, "description": level_description, "ducks": ducks,
-                   "objects": objects}, f)
+        json.dump(
+            {
+                "name": level_name,
+                "description": level_description,
+                "ducks": ducks,
+                "objects": objects,
+            },
+            f,
+        )
 
         print(f"Saved level with index of {level}.")
 
@@ -193,6 +279,8 @@ def key_press(sym, modifiers):
         current_sprite = 1
     elif sym == key._3:
         current_sprite = 2
+    elif sym == key._4:
+        current_sprite = 3
     elif sym == key.S and modifiers & key.MOD_CTRL:
         level_name, level_description, ducks = prompt_level_info()
         save_level(level_name, level_description, ducks)
@@ -203,7 +291,7 @@ def main():
     The main function of level builder.
     """
     load_sprites("sprites", "sprites/level_images")
-    create_window(width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
+    create_window(width=ui.WINDOW_WIDTH, height=ui.WINDOW_HEIGHT)
 
     set_draw_handler(draw)
     set_mouse_handler(mouse_press)

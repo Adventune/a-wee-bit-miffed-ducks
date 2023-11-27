@@ -23,6 +23,7 @@ from typing import Any
 import pyglet
 from pyglet.gl import glEnable, GL_TEXTURE_2D
 from clickable_area import ClickableArea
+from constants import ui
 
 key = pyglet.window.key
 mouse = pyglet.window.mouse
@@ -38,13 +39,13 @@ HELP_TEXT = pyglet.graphics.OrderedGroup(4)
 # recommended for your minesweeper in order to have the information required by
 # handler functions available to them.
 
-graphics: dict[str, Any] = { # Typed as any to avoid warnings
+graphics: dict[str, Any] = {  # Typed as any to avoid warnings
     "window": None,
     "background": None,
     "bg_color": None,
     "batch": None,
     "graphics": [],
-    "images": {}
+    "images": {},
 }
 
 handlers = {
@@ -57,12 +58,28 @@ pyglet.resource.add_font("fonts/junglefever/JUNGLEFE.TTF")
 pyglet.font.load("Jungle Fever")
 
 
+class CustomResizableWindow(pyglet.window.Window):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.set_minimum_size(400, 300)
+        self.push_handlers(on_resize=self.local_on_resize)
+
+    def on_draw(self):
+        self.clear()
+        self.triangle.draw()
+
+    def local_on_resize(self, width, height):
+        ui.resize_handler(width, height)
+        reset_window_bg(width)
+        # self.set_size(ui.WINDOW_WIDTH, ui.WINDOW_HEIGHT)
+
+
 def load_sprites(path, levels_path):
     """
     Loads the necessary graphics for the duck game. This include the duck
     itself (size 40x40) and a sling that can be used as an atmospheric prop
     (size 80x150).
-    
+
     :param str path: path to the sprites folder
     :param str levels_path: path to the level image folder
     """
@@ -72,15 +89,28 @@ def load_sprites(path, levels_path):
     dir_list = os.listdir(path)
     for file in dir_list:
         if file.endswith(".png"):
-            graphics["images"][file.split(".")[0]] = pyglet.resource.image(f"{path}/{file}")
+            graphics["images"][file.split(".")[0]] = pyglet.resource.image(
+                f"{path}/{file}"
+            )
 
     dir_list = os.listdir(levels_path)
     for file in dir_list:
         if file.endswith(".png"):
             level = file.split(".")[0]
             sprite_name = f"level_{level}_image"
-            graphics["images"][sprite_name] = (
-                pyglet.resource.image(f"{levels_path}/{file}"))
+            graphics["images"][sprite_name] = pyglet.resource.image(
+                f"{levels_path}/{file}"
+            )
+
+
+def reset_window_bg(width):
+    """
+    Resets the window background to the default value.
+    """
+    bg_sprite = pyglet.sprite.Sprite(pyglet.resource.image("sprites/bg.png"))
+    bg_sprite.scale = width / bg_sprite.width
+    bg_sprite.y = ui.WINDOW_HEIGHT / 2 - bg_sprite.height / 2
+    graphics["background"] = bg_sprite
 
 
 def create_window(width=800, height=600, bg_color=(240, 240, 240, 255)):
@@ -89,7 +119,7 @@ def create_window(width=800, height=600, bg_color=(240, 240, 240, 255)):
     called before any other functions in this module can be used. By default
     creates a 800x600 pixel window with light grey background. These can be
     changed by providing optional arguments to the function.
-    
+
     :param int width: window width
     :param int height: window height
     :param tuple bg_color: background color, tuple containing four values
@@ -97,11 +127,13 @@ def create_window(width=800, height=600, bg_color=(240, 240, 240, 255)):
     """
 
     if graphics["window"] is None:
-        graphics["window"] = pyglet.window.Window(width, height, resizable=True)
+        graphics["window"] = CustomResizableWindow(width, height, resizable=True)
         graphics["bg_color"] = bg_color
-        graphics["background"] = pyglet.sprite.Sprite(pyglet.resource.image("sprites/bg.png"))
         graphics["window"].set_visible(False)
+        reset_window_bg(width)
         graphics["window"].on_close = close
+
+        # graphics["window"].on_resize = resize_handler
     else:
         resize_window(width, height)
 
@@ -115,22 +147,20 @@ def resize_window(width, height):
     """
 
     graphics["window"].set_size(width, height)
-    graphics["background"] = pyglet.sprite.Sprite(
-        pyglet.image.SolidColorImagePattern(graphics["bg_color"]).create_image(width, height)
-    )
+    reset_window_bg(width)
 
 
 def set_mouse_handler(handler):
     """
     Sets a function that is used to handle mouse clicks. The handler function
     will be called whenever a mouse button is pressed down inside the game
-    window. The handler must be a function that has four parameters: x, y, 
+    window. The handler must be a function that has four parameters: x, y,
     button, and modifier keys. X and y are the mouse click's coordinates inside
     the window; button indicates which button was pressed (its possible values
     are MOUSE_LEFT, MOUSE_MIDDLE, and MOUSE_RIGHT). Modifier keys have been
     explained in the module documentation, and should not be needed in a basic
     implementation.
-    
+
     In other words you need a function similar to this in your code:
 
     def mouse_handler(x, y, button, modifiers):
@@ -177,12 +207,12 @@ def set_drag_handler(handler):
     are MOUSE_LEFT, MOUSE_MIDDLE, and MOUSE_RIGHT). Modifier keys have been
     explained in the module documentation, and should not be needed in a basic
     implementation.
-    
+
     In other words you need a function similar to this in your code:
-    
+
     def drag_handler(x, y, dx, dy, button, modifiers):
         # things happen
-        
+
     and register it:
 
     game_lib.set_drag_handler(drag_handler)
@@ -204,15 +234,15 @@ def set_release_handler(handler):
     needed if a program needs to do something after dragging an object. Accepts
     a handler similar to the mouse click handler. Define a function similar to
     this:
-    
+
     Asettaa funktion, jota käytetään kun hiiren nappi vapautetaan.
     Tyypillisesti tarpeellinen jos raahauksen päätteeksi halutaan tehdä jotain.
-    Käsittelijäksi kelpaa samanlainen funktion kuin 
+    Käsittelijäksi kelpaa samanlainen funktion kuin
     aseta_hiiri_kasittelija-funktiolle. Eli määrittele sopiva funktio:
-    
+
     def release_handler(x, y, button, modifiers):
         # things happen
-        
+
     and register it:
 
     game_lib.set_release_handler(release_handler)
@@ -233,10 +263,10 @@ def set_keyboard_handler(handler):
     Sets a function that is for handling keyboard input. You won't need this
     unless you want to use the keyboard for something. The handler function
     must have two parameters: symbol and modifier keys. The symbol is a
-    constant that's been defined in the pyglet.window.key module (e.g. 
+    constant that's been defined in the pyglet.window.key module (e.g.
     pyglet.window.key.A is the A key). Use the following import to access these
     constants conveniently:
-    
+
     from pyglet.window import key
 
     With this you can use the key name to access key codes, e.g. key.A for A.
@@ -265,14 +295,14 @@ def set_draw_handler(handler):
     Sets a function that is used for drawing the game's graphics - somewhat
     important. The handler is a function that doesn't have any parameters, and
     it should daw the window's contents by using the following functions:
-    
+
     clear_window (clears away everything draw last iteration)
     draw_background (draws the background color)
     begin_sprite_draw (called before drawing the game tiles)
     prepare_sprite (prepares a sprite to be drawn)
     draw_sprites (draws all prepared sprites at once)
     draw_text (writes some text - optional)
-    
+
     :param function handler: handler function for drawing
     """
 
@@ -289,10 +319,10 @@ def set_interval_handler(handler, interval=1 / 60):
     seconds and is treated as a target - it will always have some variance in
     milliseconds. The actual time elapsed between function calls is given to
     the handler to its sole parameter. The handler must match:
-    
+
     def interval_handler(elapsed):
         # something happens
-        
+
     and is registered with
 
     game_lib.set_interval_handler(interval_handler, 1/60)
@@ -360,17 +390,27 @@ def begin_graphics_draw():
     graphics["batch"] = pyglet.graphics.Batch()
 
 
-def prepare_text(text, x, y, color=(255, 255, 255, 255), font="junglefever", size=32,
-                 anchor_x="center", anchor_y="bottom", group=FOREGROUND, onclick=lambda: None):
+def prepare_text(
+    text,
+    x,
+    y,
+    color=(255, 255, 255, 255),
+    font="junglefever",
+    size=32,
+    anchor_x="center",
+    anchor_y="bottom",
+    group=FOREGROUND,
+    onclick=lambda: None,
+):
     """
     Draws text on the screen. Can be used if you want to write something to
     the game window (e.g. counters or instructions). Default font is serif,
     size 32, color black. These can be altered by providing the function its
     optional arguments. The x and y coordinates define the bottom left corner
     of the text.
-    
+
     Text, if any, should be drawn last.
-    
+
     :param str text: string to display
     :param int x: bottom left x coordinate for the text
     :param int y: bottom left y coordinate for the text
@@ -383,15 +423,30 @@ def prepare_text(text, x, y, color=(255, 255, 255, 255), font="junglefever", siz
     :param function onclick: function to call when the text is clicked
     """
 
-    text_box = pyglet.text.Label(text, font_name=font,
-                                 font_size=size, color=color, x=x, y=y,
-                                 anchor_x=anchor_x, anchor_y=anchor_y,
-                                 group=group, batch=graphics["batch"])
+    text_box = pyglet.text.Label(
+        text,
+        font_name=font,
+        font_size=size,
+        color=color,
+        x=x,
+        y=y,
+        anchor_x=anchor_x,
+        anchor_y=anchor_y,
+        group=group,
+        batch=graphics["batch"],
+    )
 
     graphics["graphics"].append(text_box)
 
-    return ClickableArea(x, y, x + text_box.content_width, y + text_box.content_height,
-                         onclick=onclick, text_anchor_x=anchor_x, text_anchor_y=anchor_y)
+    return ClickableArea(
+        x,
+        y,
+        x + text_box.content_width,
+        y + text_box.content_height,
+        onclick=onclick,
+        text_anchor_x=anchor_x,
+        text_anchor_y=anchor_y,
+    )
 
 
 def prepare_sprite(key, x, y, group=FOREGROUND, scale=1, onclick=lambda: None):
@@ -401,7 +456,7 @@ def prepare_sprite(key, x, y, group=FOREGROUND, scale=1, onclick=lambda: None):
     argument defines which sprite to draw. Possible values are the numbers
     0 to 8 as strings, "x" for mines, "f" for flags, and " " for unopened
     tiles.
-    
+
     You have to calculate the position of each tile. One tile sprite is always
     40x40 pixels.
 
@@ -414,9 +469,7 @@ def prepare_sprite(key, x, y, group=FOREGROUND, scale=1, onclick=lambda: None):
     """
 
     sprite = pyglet.sprite.Sprite(
-        graphics["images"][str(key).lower()],
-        x, y,
-        batch=graphics["batch"], group=group
+        graphics["images"][str(key).lower()], x, y, batch=graphics["batch"], group=group
     )
 
     sprite.scale = scale
@@ -450,14 +503,14 @@ def set_scene(scene_name):
         "menu": MENU_SCENE,
         "levels": LEVELS_MENU_SCENE,
         "game": GAME_SCENE,
-        "completed": COMPLETED_SCENE
+        "completed": COMPLETED_SCENE,
     }
 
     scene = scenes[scene_name]
 
     set_draw_handler(scene.draw_handler)
     set_mouse_handler(scene.mouse_handler)
-    set_interval_handler(scene.interval_handler, scene.interval)
+    set_interval_handler(scene.interval_handler)
     set_drag_handler(scene.drag_handler)
     set_release_handler(scene.release_handler)
     set_keyboard_handler(scene.keyboard_handler)
