@@ -483,6 +483,8 @@ def game_update(dt):
     """
     This function handles game logic.
     """
+    x_vel = current_duck["x_velocity"] * ui.WINDOW_RESIZE_SCALE
+    y_vel = current_duck["y_velocity"] * ui.WINDOW_RESIZE_SCALE
     scaled_gravity = GRAVITY * ui.WINDOW_RESIZE_SCALE
     scaled_break_velocity = MIN_BREAK_VELOCITY * ui.WINDOW_RESIZE_SCALE
     scaled_hard_break_velocity = MIN_HARD_BREAK_VELOCITY * ui.WINDOW_RESIZE_SCALE
@@ -509,9 +511,9 @@ def game_update(dt):
             prev_position_y = current_duck["y"]
 
             # Update ducks position
-            current_duck["position"] += (
-                current_duck["direction"] * current_duck["speed"] * scaled_gravity * dt
-            )
+            current_duck["x"] += x_vel
+            current_duck["y"] += y_vel
+            current_duck["y_velocity"] -= scaled_gravity
 
             # Loop for every object that is within the x range of the duck
             check_range = 2 * ui.SPRITE_WIDTH
@@ -527,10 +529,8 @@ def game_update(dt):
                     obstacle["x"] * ui.WINDOW_RESIZE_SCALE,
                     obstacle["y"] * ui.WINDOW_RESIZE_SCALE,
                 )
-                duck_x, duck_y = (
-                    current_duck["position"][0],
-                    current_duck["position"][1],
-                )
+
+                duck_x, duck_y = current_duck["x"], current_duck["y"]
 
                 # Go through every obstacle near the duck and check if it overlaps with the duck
                 if overlaps(duck_x, duck_y, obstacle_x, obstacle_y):
