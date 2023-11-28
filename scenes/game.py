@@ -36,7 +36,7 @@ from game_lib import (
     SHADE,
     mouse,
 )
-from utils import degrees_and_ray_to_x_y, overlaps, get_hypotenuse
+from utils import degrees_and_ray_to_x_y, sprites_overlap, get_hypotenuse
 from defaults import DEFAULT_LEVEL, DEFAULT_GAME
 from duck import Duck
 
@@ -256,98 +256,39 @@ def game_drag_handler(x, y, dx, dy, buttons, modifiers):
 def game_update(dt):
     global level_state, current_duck, thrown_ducks, level, current_level, current_high_score
 
-    scaled_x_vel = current_duck.x_velocity * ui.WINDOW_RESIZE_SCALE
-    scaled_y_vel = current_duck.y_velocity * ui.WINDOW_RESIZE_SCALE
-    scaled_gravity = GRAVITY * ui.WINDOW_RESIZE_SCALE
-    scaled_break_velocity = MIN_BREAK_VELOCITY * ui.WINDOW_RESIZE_SCALE
-    scaled_hard_break_velocity = MIN_HARD_BREAK_VELOCITY * ui.WINDOW_RESIZE_SCALE
-    scaled_min_y_vel = MIN_Y_VELOCITY * ui.WINDOW_RESIZE_SCALE
-    scaled_min_x_vel = MIN_X_VELOCITY * ui.WINDOW_RESIZE_SCALE
-
-    donkeys_remaining = len(
-        [obstacle for obstacle in level["objects"] if obstacle["type"] == "donkey"]
-    )
+    donkeys_remaining = get_remaining_donkeys()
 
     if level["ducks"] == len(thrown_ducks) or donkeys_remaining == 0:
         if level_state == LEVEL_ONGOING:
             level_state = LEVEL_FAILED if donkeys_remaining > 0 else LEVEL_COMPLETED
 
     else:
-        flight_ended = False
+        flight_ended_this_tick = False
         if current_duck.is_flying:
-            # A duck is currently in the air
-            # Save ducks position before updating it
             prev_position_x = current_duck.x
             prev_position_y = current_duck.y
 
-            # Update ducks position
-            current_duck.x += scaled_x_vel
-            current_duck.y += scaled_y_vel
-            current_duck.y_velocity -= scaled_gravity
+            duck_x, duck_y = current_duck.move(scale=ui.WINDOW_RESIZE_SCALE)
 
-            nearby_objects = get_nearby_objects(current_duck.x, current_duck.y)
+            nearby_objects = get_nearby_objects(duck_x, duck_y)
             for obstacle in nearby_objects:
-                obstacle_x, obstacle_y = (
+                obstacle_x, obstacle_y, obstacle_type = (
                     obstacle["x"] * ui.WINDOW_RESIZE_SCALE,
                     obstacle["y"] * ui.WINDOW_RESIZE_SCALE,
+                    obstacle["type"],
                 )
 
-                duck_x, duck_y = current_duck.x, current_duck.y
+                if sprites_overlap(duck_x, duck_y, obstacle_x, obstacle_y):
+                    if obstacle_should_break(obstacle):
+                        drag_addition = 0.2 if obstacle_type == "hard" else 0
+                        level["objects"].remove(obstacle)
+                        current_duck.x_velocity *= HIT_DRAG - drag_addition
+                        current_duck.y_velocity *= HIT_DRAG - drag_addition
 
-                # Go through every obstacle near the duck and check if it overlaps with the duck
-                if overlaps(duck_x, duck_y, obstacle_x, obstacle_y):
-                    velocity_hypotenuse = get_hypotenuse(
-                        current_duck.x_velocity, current_duck.y_velocity
-                    )
-                    # Object is destroyable if:
-                    # 1. It is a soft obstacle
-                    # 2. It is a donkey
-                    # 3. It is a hard obstacle and has been hit before
-                    # 4. Object is hard and duck is moving fast enough
-                    if (
-                        obstacle["type"] == "soft"
-                        or obstacle["type"] == "donkey"
-                        or (
-                            obstacle["type"] == "hard"
-                            and (
-                                obstacle.get("has_been_hit", False)
-                                or velocity_hypotenuse > scaled_hard_break_velocity
-                            )
-                        )
-                    ):
-                        # Here we handle all destroyable objects and destroy them
-                        # if they are hit with enough force
-
-                        # If duck collides with an soft obstacle, remove obstacle
-                        # and lower ducks velocity
-                        if velocity_hypotenuse > scaled_break_velocity:
-                            drag_addition = 0
-                            if obstacle["type"] == "hard":
-                                drag_addition = 0.2
-                            level["objects"].remove(obstacle)
-                            current_duck.x_velocity *= HIT_DRAG - drag_addition
-                            current_duck.y_velocity *= HIT_DRAG - drag_addition
-
-                    # Object is not destroyable if:
-                    # 1. It is an unbreakable obstacle
-                    # 2. It is a hard obstacle and has not been hit before
-                    # 3. It is destroyable but the duck is not moving fast enough
-                    if (
-                        obstacle["type"] == "unbreakable"
-                        or (
-                            obstacle["type"] == "hard"
-                            and not obstacle.get("has_been_hit", False)
-                            and velocity_hypotenuse < scaled_hard_break_velocity
-                        )
-                        or velocity_hypotenuse < scaled_break_velocity
-                    ):
-                        # Set that the obstacle has been hit
-                        # It doesn't matter if it is destroyable or not
+                    else:
                         if not obstacle.get("has_been_hit", False):
                             obstacle["has_been_hit"] = True
 
-                        # Duck has previously been above or below the obstacle
-                        # It must have entered from above or below so bounce it on the y axis
                         duck_came_from_above = (
                             prev_position_y > obstacle["y"] + ui.SPRITE_HEIGHT
                         )
@@ -355,60 +296,31 @@ def game_update(dt):
                             prev_position_y + ui.SPRITE_HEIGHT < obstacle["y"]
                         )
                         if duck_came_from_above or duck_came_from_below:
-                            # If the duck is moving slow enough and it came from above
-                            # stop it and add it to the list of thrown ducks
-                            if (
-                                (
-                                    abs(current_duck.y_velocity) < scaled_min_y_vel
-                                    or abs(current_duck.x_velocity) < scaled_min_x_vel
-                                )
-                            ) and duck_came_from_above:
-                                current_duck.y_velocity = 0
-                                current_duck.is_flying = False
+                            if duck_is_moving_too_slow(y=True) and duck_came_from_above:
+                                current_duck.stop()
                                 current_duck.y = obstacle["y"] + ui.SPRITE_HEIGHT
 
-                                flight_ended = True
+                                flight_ended_this_tick = True
                             else:
-                                current_duck.y = prev_position_y
-                                current_duck.y_velocity *= BOUNCE_ACCELERATION_Y
-                                current_duck.x_velocity *= DRAG
+                                current_duck.bounce_y(prev_position_y)
+                                break
 
-                        # Duck has previously been to the left or right of the obstacle
-                        # It must have entered from the side so bounce it on the y axis
                         else:
-                            current_duck.x = prev_position_x
-                            current_duck.x_velocity *= BOUNCE_ACCELERATION_X
-                            current_duck.y_velocity *= DRAG
+                            current_duck.bounce_x(prev_position_x)
+                            break
 
-            # Duck is not colliding with any obstacles
-            # Check if it flew off the screen or hit the floor
-            if current_duck.x < 0 or current_duck.x > ui.WINDOW_WIDTH:
-                # Stop the duck and add it to the list of thrown ducks
-                current_duck.is_flying = False
-                current_duck.x_velocity = 0
-                current_duck.y_velocity = 0
-
-                flight_ended = True
+            if current_duck.x + ui.SPRITE_WIDTH < 0 or current_duck.x > ui.WINDOW_WIDTH:
+                current_duck.stop()
+                flight_ended_this_tick = True
             elif current_duck.y < ui.FLOOR_LEVEL:
                 current_duck.y = ui.FLOOR_LEVEL
-                # Bounce back until the velocity is small enough
-                if abs(current_duck.y_velocity) > scaled_min_y_vel:
-                    current_duck.y_velocity *= BOUNCE_ACCELERATION_Y
-                    current_duck.x_velocity *= DRAG
-
+                if not duck_is_moving_too_slow(y=True):
+                    current_duck.bounce_y(ui.FLOOR_LEVEL)
                 else:
-                    current_duck.y_velocity = 0
-                    current_duck.is_flying = False
-                    current_duck.y = ui.FLOOR_LEVEL
+                    current_duck.stop()
+                    flight_ended_this_tick = True
 
-                    flight_ended = True
-        else:
-            # Duck is not flying
-            # Reset ducks position
-            current_duck.x = ui.SLING_POINT
-            current_duck.y = ui.FLOOR_LEVEL + ui.SPRITE_HEIGHT
-
-        if flight_ended:
+        if flight_ended_this_tick:
             new_thrown_duck = deepcopy(current_duck)
             new_thrown_duck.scale_on_save = ui.WINDOW_RESIZE_SCALE
             thrown_ducks.append(new_thrown_duck)
@@ -615,7 +527,7 @@ def prepare_info_text():
     prepare_text(
         "Ducks remaining: {}".format(level["ducks"] - len(thrown_ducks)),
         ui.WINDOW_WIDTH / 2,
-        ui.WINDOW_HEIGHT - 150,
+        ui.WINDOW_HEIGHT - 180,
         size=20,
     )
     # Draw level name
@@ -629,10 +541,15 @@ def prepare_info_text():
         prepare_text(
             "High score: {}".format(game["random_high_score"]),
             ui.WINDOW_WIDTH / 2,
-            700,
+            ui.WINDOW_HEIGHT - 120,
             size=20,
         )
-        prepare_text(f"Score: {current_high_score}", ui.WINDOW_WIDTH / 2, 670, size=20)
+        prepare_text(
+            f"Score: {current_high_score}",
+            ui.WINDOW_WIDTH / 2,
+            ui.WINDOW_HEIGHT - 150,
+            size=20,
+        )
 
 
 def prepare_floor_sprites():
@@ -696,6 +613,49 @@ def get_nearby_objects(x, y):
     return [
         obstacle
         for obstacle in level["objects"]
-        if abs(obstacle["x"] * ui.WINDOW_RESIZE_SCALE - x) < check_range
-        or abs(obstacle["y"] * ui.WINDOW_RESIZE_SCALE - y) < check_range
+        if (
+            (
+                abs(obstacle["x"] * ui.WINDOW_RESIZE_SCALE - x) < check_range
+                or abs(obstacle["y"] * ui.WINDOW_RESIZE_SCALE - y) < check_range
+            )
+            and obstacle["type"] != "text"
+        )
     ]
+
+
+def get_remaining_donkeys():
+    return len(
+        [obstacle for obstacle in level["objects"] if obstacle["type"] == "donkey"]
+    )
+
+
+def obstacle_should_break(obstacle):
+    velocity_hypotenuse = get_hypotenuse(
+        current_duck.x_velocity, current_duck.y_velocity
+    )
+    obstacle_type = obstacle["type"]
+    scaled_break_velocity = MIN_BREAK_VELOCITY * ui.WINDOW_RESIZE_SCALE
+    scaled_hard_break_velocity = MIN_HARD_BREAK_VELOCITY * ui.WINDOW_RESIZE_SCALE
+
+    return (
+        obstacle_type in ["soft", "donkey"]
+        or (
+            obstacle_type == "hard"
+            and (
+                obstacle.get("has_been_hit", False)
+                or velocity_hypotenuse > scaled_hard_break_velocity
+            )
+        )
+        and velocity_hypotenuse > scaled_break_velocity
+    )
+
+
+def duck_is_moving_too_slow(x=True, y=False):
+    scaled_min_y_vel = MIN_Y_VELOCITY * ui.WINDOW_RESIZE_SCALE
+    scaled_min_x_vel = MIN_X_VELOCITY * ui.WINDOW_RESIZE_SCALE
+    if x:
+        if abs(current_duck.x_velocity) < scaled_min_x_vel:
+            return True
+    if y:
+        if abs(current_duck.y_velocity) < scaled_min_y_vel:
+            return True

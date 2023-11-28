@@ -16,7 +16,7 @@ def degrees_and_ray_to_x_y(degrees, ray):
     return x, y
 
 
-def overlaps(x_1, y_1, x_2, y_2):
+def sprites_overlap(x_1, y_1, x_2, y_2):
     """
     Checks if two tile sprites overlap
     """
