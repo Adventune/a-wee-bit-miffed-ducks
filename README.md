@@ -31,7 +31,11 @@ Run it with `python level_editor.py` and it will create level files when you sav
 
 Level editor prompts you for the level name, description and duck count in the console when saving.
 
-## TODO
+## Improvements I was too lazy to implement
 
-- [] Add hard crates
-- [] Add more levels
+- Delta time is not accounted for (didn't fancy doing the calculus/integrals that comes with it (
+sure, as gravity is constant acceleration in this implementation it would be possible without
+calculus. Just didn't feel like implementing it anymore))
+- Code structure might not be optimal or event that good (looking at you `scenes/game.py`).
+- I should have used different GUI-library from the beginning. But it was alright to implement the
+game idea with a non-game library.
