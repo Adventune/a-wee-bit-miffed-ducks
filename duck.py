@@ -1,9 +1,9 @@
 from constants import (
     ui,
-    MIN_TAKEOFF_VELOCITY,
-    GRAVITY,
-    BOUNCE_ACCELERATION_Y,
     DRAG,
+    GRAVITY,
+    MIN_TAKEOFF_VELOCITY,
+    BOUNCE_ACCELERATION_Y,
     BOUNCE_ACCELERATION_X,
 )
 from utils import degrees_and_ray_to_x_y, get_hypotenuse

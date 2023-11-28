@@ -6,7 +6,9 @@ class ClickableArea:
     text_anchor_x = None
     text_anchor_y = None
 
-    def __init__(self, x, y, x_2, y_2, onclick=None, text_anchor_x=None, text_anchor_y=None):
+    def __init__(
+        self, x, y, x_2, y_2, onclick=None, text_anchor_x=None, text_anchor_y=None
+    ):
         self.x = x
         self.y = y
         self.x_2 = x_2
@@ -25,13 +27,16 @@ class ClickableArea:
                 case "center":
                     x_corrected -= (self.x_2 - self.x) / 2
                 case "right":
-                    x_corrected -= (self.x_2 - self.x)
+                    x_corrected -= self.x_2 - self.x
             match self.text_anchor_y:
                 case "center":
                     y_corrected -= (self.y_2 - self.y) / 2
                 case "top":
-                    y_corrected -= (self.y_2 - self.y)
-            return x_corrected <= click_x <= self.x_2 and y_corrected <= click_y <= self.y_2
+                    y_corrected -= self.y_2 - self.y
+            return (
+                x_corrected <= click_x <= self.x_2
+                and y_corrected <= click_y <= self.y_2
+            )
 
     def onclick(self):
         pass
