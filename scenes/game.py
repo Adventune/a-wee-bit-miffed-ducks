@@ -11,9 +11,6 @@ from constants import (
     MIN_HARD_BREAK_VELOCITY,
     MIN_X_VELOCITY,
     MIN_Y_VELOCITY,
-    DRAG,
-    BOUNCE_ACCELERATION_X,
-    BOUNCE_ACCELERATION_Y,
     HIT_DRAG,
     TOTAL_LEVEL_COUNT,
     LEVEL_ONGOING,
@@ -206,6 +203,7 @@ def game_keypress_handler(sym, mods):
 
 
 def game_mouse_down_handler(x, y, button, modifiers):
+    global level_state, current_duck, drag, drag_start, drag_current, help_visible
     if level_state or help_visible:
         return
 
