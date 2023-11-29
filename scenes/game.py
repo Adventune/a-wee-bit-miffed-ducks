@@ -57,6 +57,27 @@ current_level = 0
 
 def set_level(data):
     global level, level_copy, text_objects
+    data["objects"] = data["objects"]
+
+    for i in range(
+        0, 1400, 40
+    ):  # 1400 is the initial width of the window, 40 is sprite width
+        data["objects"].append(
+            {
+                "type": "unbreakable",
+                "x": i,
+                "y": 0,
+            }
+        )
+
+    for i in range(-1, 2):
+        data["objects"].append(
+            {
+                "type": "unbreakable",
+                "x": 120 + i * 40,  # 120 is the sling point, 40 is sprite width
+                "y": 40,
+            }
+        )
     level = data
     level_copy = deepcopy(data)
     text_objects = [
@@ -114,7 +135,7 @@ def launch():
     if level_state:
         return
 
-    current_duck.launch()
+    current_duck.launch(ui.WINDOW_RESIZE_SCALE)
 
 
 def game_draw():
@@ -131,7 +152,6 @@ def game_draw():
     if drag:
         prepare_drag_start_and_end_sprites()
 
-    prepare_floor_sprites()
     prepare_obstacle_sprites()
 
     for thrown_duck in thrown_ducks:
@@ -236,7 +256,7 @@ def game_drag_handler(x, y, dx, dy, buttons, modifiers):
     # Calculate angle from vector
     angle = round(degrees(atan(max(0, real_dy) / real_dx)))
     force = round(
-        get_hypotenuse(real_dx, real_dy) / FORCE_DIVIDER * ui.WINDOW_RESIZE_SCALE
+        get_hypotenuse(real_dx, real_dy) / FORCE_DIVIDER / ui.WINDOW_RESIZE_SCALE
     )
 
     # Clamp force between 5 and 50
@@ -288,15 +308,15 @@ def game_update(dt):
                             obstacle["has_been_hit"] = True
 
                         duck_came_from_above = (
-                            prev_position_y > obstacle["y"] + ui.SPRITE_HEIGHT
+                            prev_position_y > obstacle_y + ui.SPRITE_HEIGHT
                         )
                         duck_came_from_below = (
-                            prev_position_y + ui.SPRITE_HEIGHT < obstacle["y"]
+                            prev_position_y + ui.SPRITE_HEIGHT < obstacle_y
                         )
                         if duck_came_from_above or duck_came_from_below:
                             if duck_is_moving_too_slow(y=True) and duck_came_from_above:
                                 current_duck.stop()
-                                current_duck.y = obstacle["y"] + ui.SPRITE_HEIGHT
+                                current_duck.y = obstacle_y + ui.SPRITE_HEIGHT
 
                                 flight_ended_this_tick = True
                             else:
@@ -310,14 +330,9 @@ def game_update(dt):
             if current_duck.x + ui.SPRITE_WIDTH < 0 or current_duck.x > ui.WINDOW_WIDTH:
                 current_duck.stop()
                 flight_ended_this_tick = True
-            elif current_duck.y < ui.FLOOR_LEVEL:
-                current_duck.y = ui.FLOOR_LEVEL
-                if not duck_is_moving_too_slow(y=True):
-                    current_duck.bounce_y(ui.FLOOR_LEVEL)
-                else:
-                    current_duck.stop()
-                    flight_ended_this_tick = True
-
+        else:
+            current_duck.x = ui.SLING_POINT
+            current_duck.y = ui.FLOOR_LEVEL + ui.SPRITE_HEIGHT
         if flight_ended_this_tick:
             new_thrown_duck = deepcopy(current_duck)
             new_thrown_duck.scale_on_save = ui.WINDOW_RESIZE_SCALE
@@ -399,17 +414,22 @@ def prepare_flight_path_sprites():
         and current_takeoff_velocity > MIN_TAKEOFF_VELOCITY
     ):
         x_v, y_v = degrees_and_ray_to_x_y(current_duck.angle, current_duck.force)
-        i = 0
-
+        x_v *= ui.WINDOW_RESIZE_SCALE
+        y_v *= ui.WINDOW_RESIZE_SCALE
+        scaled_gravity = GRAVITY * ui.WINDOW_RESIZE_SCALE
         duck_x, duck_y = (
-            current_duck.x * ui.WINDOW_RESIZE_SCALE,
-            current_duck.y * ui.WINDOW_RESIZE_SCALE,
+            current_duck.x,
+            current_duck.y,
         )
+        i = 0
         while True:
             i += 1
             duck_x += x_v
             duck_y += y_v
-            y_v -= GRAVITY
+            y_v -= scaled_gravity
+
+            if duck_y < ui.FLOOR_LEVEL:
+                break
 
             if i % 2 == 0:
                 prepare_sprite(
@@ -419,9 +439,6 @@ def prepare_flight_path_sprites():
                     group=FOREGROUND,
                     scale=ui.WINDOW_RESIZE_SCALE,
                 )
-
-            if duck_y < ui.FLOOR_LEVEL:
-                break
 
 
 def prepare_drag_start_and_end_sprites():
@@ -550,25 +567,6 @@ def prepare_info_text():
         )
 
 
-def prepare_floor_sprites():
-    for i in range(0, ui.WINDOW_WIDTH, ui.SPRITE_WIDTH):
-        prepare_sprite(
-            "stone",
-            i,
-            ui.FLOOR_LEVEL - ui.SPRITE_HEIGHT,
-            group=FOREGROUND,
-            scale=ui.WINDOW_RESIZE_SCALE,
-        )
-
-    for i in range(-1, 2):
-        prepare_sprite(
-            "stone",
-            ui.SLING_POINT + i * ui.SPRITE_WIDTH,
-            ui.FLOOR_LEVEL,
-            scale=ui.WINDOW_RESIZE_SCALE,
-        )
-
-
 def prepare_level_text_objects():
     # Loop through every text object in the level
     for object in text_objects:
@@ -608,7 +606,7 @@ def prepare_level_failed_text():
 
 def get_nearby_objects(x, y):
     check_range = 2 * ui.SPRITE_WIDTH
-    return [
+    nearby = [
         obstacle
         for obstacle in level["objects"]
         if (
@@ -618,6 +616,9 @@ def get_nearby_objects(x, y):
             )
             and obstacle["type"] != "text"
         )
+    ]
+    return [obstacle for obstacle in nearby if obstacle["type"] != "donkey"] + [
+        obstacle for obstacle in nearby if obstacle["type"] == "donkey"
     ]
 
 

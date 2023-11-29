@@ -21,7 +21,7 @@ class Duck:
         self.force = 5
         self.is_flying = False
 
-    def launch(self):
+    def launch(self, scale=1):
         current_x_velocity, current_y_velocity = degrees_and_ray_to_x_y(
             self.angle, self.force
         )
@@ -34,8 +34,8 @@ class Duck:
         if not self.is_flying:
             self.is_flying = True
             x, y = degrees_and_ray_to_x_y(self.angle, self.force)
-            self.x_velocity = x
-            self.y_velocity = y
+            self.x_velocity = x * scale
+            self.y_velocity = y * scale
 
     def stop(self):
         self.is_flying = False
@@ -43,15 +43,11 @@ class Duck:
         self.y_velocity = 0
 
     def move(self, scale=1):
-        scaled_x_vel = self.x_velocity * scale
-        scaled_y_vel = self.y_velocity * scale
         scaled_gravity = GRAVITY * scale
 
-        self.x += scaled_x_vel
-        self.y += scaled_y_vel
+        self.x += min(self.x_velocity, ui.SPRITE_WIDTH)
+        self.y += min(self.y_velocity, ui.SPRITE_HEIGHT)
         self.y_velocity -= scaled_gravity
-
-        print(self.x, self.y, self.x_velocity, self.y_velocity)
 
         return self.x, self.y
 
