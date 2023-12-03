@@ -45,9 +45,5 @@ def sprites_overlap(x_1, y_1, x_2, y_2):
     )
 
 
-def is_on_screen(x, y):
-    return is_within_bounds(x, y, 0, 0, ui.WINDOW_WIDTH, ui.WINDOW_HEIGHT)
-
-
 def get_hypotenuse(x_leg, y_leg):
     return (x_leg**2 + y_leg**2) ** 0.5
