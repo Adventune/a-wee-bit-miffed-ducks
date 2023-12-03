@@ -58,14 +58,6 @@ def level_menu_draw():
             if level <= game["level_progress"]:
 
                 def lambda_generator(value):
-                    """
-                    Lambda generator for the onclick function of the level image.
-                    param value: The level to load.
-
-                    return: A lambda function that loads the given level.
-
-                    Why? Because otherwise the lambda function would always load the last+1 level.
-                    """
                     return lambda: set_scene("game").init(value, 0)
 
                 try:
@@ -89,7 +81,6 @@ def level_menu_draw():
                         )
                     )
 
-                prepare_text(f"Level {str(level)}", x=x, y=y - 50, anchor_x="left")
             else:
                 try:
                     prepare_sprite(
@@ -115,6 +106,7 @@ def level_menu_draw():
                     scale=scale,
                     group=FOREGROUND,
                 )
+            prepare_text(f"Level {str(level)}", x=x, y=y - 34, anchor_x="left", size=24)
 
     prepare_text("Level Menu", ui.WINDOW_WIDTH / 2, ui.WINDOW_HEIGHT - 100)
     prepare_text(
@@ -132,22 +124,25 @@ def level_menu_draw():
             y=ui.FLOOR_LEVEL,
             anchor_x="left",
             anchor_y="bottom",
-            onclick=lambda: set_scene("menu"),
+            onclick=lambda: set_scene("levels").init(page - 1),
         )
     )
 
-    clickable_areas.clear()
-    clickable_areas.extend(temp_clickable_areas)
-
     if TOTAL_LEVEL_COUNT > 6:
         # Draw next page text
-        prepare_text(
-            "Next Page",
-            x=ui.WINDOW_WIDTH - 200,
-            y=ui.FLOOR_LEVEL,
-            anchor_x="right",
-            anchor_y="bottom",
+        temp_clickable_areas.append(
+            prepare_text(
+                "Next Page",
+                x=ui.WINDOW_WIDTH - 200,
+                y=ui.FLOOR_LEVEL,
+                anchor_x="right",
+                anchor_y="bottom",
+                onclick=lambda: set_scene("levels").init(page + 1),
+            )
         )
+
+    clickable_areas.clear()
+    clickable_areas.extend(temp_clickable_areas)
 
     draw_graphics()
 
@@ -164,9 +159,14 @@ def level_menu_key_handle(sym, modifiers):
         set_scene("game").init(-1, 0)
 
 
-def init():
+def init(page_number=0):
     global page, game
-    page = 0
+    page = page_number
+    if page > TOTAL_LEVEL_COUNT / 6:
+        page = 0
+    elif page < 0:
+        set_scene("menu")
+        return
     with open("game.json", "r") as game_data:
         game = json.load(game_data)
 

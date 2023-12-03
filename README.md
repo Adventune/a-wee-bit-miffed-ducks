@@ -33,9 +33,7 @@ Level editor prompts you for the level name, description and duck count in the c
 
 ## Improvements I was too lazy to implement
 
-- Delta time is not accounted for (didn't fancy doing the calculus/integrals that comes with it (
-sure, as gravity is constant acceleration in this implementation it would be possible without
-calculus. Just didn't feel like implementing it anymore))
-- Code structure might not be optimal or event that good (looking at you `scenes/game.py`).
+- Delta time is not accounted for
 - I should have used different GUI-library from the beginning. But it was alright to implement the
-game idea with a non-game library.
+game idea with a library that is not necesseraly designed for games
+- Previews of levels could be rendered from level file instead of screenshots. Works fine though.
